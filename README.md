@@ -433,6 +433,104 @@ Result: Object(Object({"age": Number(Int(30)), "id": Thing(Thing { tb: "person",
 Result: Object(Object({"age": Number(Int(35)), "id": Thing(Thing { tb: "person", id: String("yixm35a2j3pkhn7ohqj1") }), "name": Strand(Strand("Charlie"))}))
 ```
 
+GREAT, but now Result should be a Person rather than a Value Objects.
+
+I asked it to modify the code to use the Person struct and it
+[responded](https://chatgpt.com/share/8349f87b-33e6-44db-9e4e-ec580e1bd189) with:
+```rust
+    if let Ok(Value::Array(results)) = response.take(0) {
+        let persons: Vec<Person> = results.into_iter().filter_map(|result| {
+            if let Value::Object(map) = result {
+                serde_json::from_value(Value::Object(map)).ok()
+            } else {
+                None
+            }
+        }).collect();
+
+        for person in persons {
+            println!("Person: {:?}", person);
+        }
+    }
+```
+
+That needed a tincy tweak Value::Object(map) to `Value::Object(map).into()`
+plus add serde_json to the dependencies:
+```shell
+$ git --no-pager diff HEAD
+diff --git a/Cargo.lock b/Cargo.lock
+index 90f715a..a40cd03 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -818,6 +818,7 @@ name = "exper-surrealdb-take-gpt4o"
+ version = "0.1.0"
+ dependencies = [
+  "serde",
++ "serde_json",
+  "surrealdb",
+  "tokio",
+ ]
+diff --git a/Cargo.toml b/Cargo.toml
+index 2e77a94..40e35c4 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -5,5 +5,6 @@ edition = "2021"
+ 
+ [dependencies]
+ serde = { version = "1.0.203", features = ["derive"] }
++serde_json = "1.0.117"
+ surrealdb = { version = "1.5.1", features = ["kv-mem", "sql2"] }
+ tokio = { version = "1.37.0", features = ["macros", "rt-multi-thread"] }
+diff --git a/src/main.rs b/src/main.rs
+index fee86c8..8c1d34b 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -3,8 +3,9 @@ use surrealdb::Surreal;
+ use surrealdb::sql::Value;
+ use surrealdb::Response;
+ use surrealdb::Result;
++use serde::{Deserialize, Serialize};
+ 
+-#[derive(serde::Serialize)]
++#[derive(Serialize, Deserialize, Debug)]
+ struct Person {
+     name: String,
+     age: i64,
+@@ -40,8 +41,16 @@ async fn main() -> Result<()> {
+ 
+     // Access the first result
+     if let Ok(Value::Array(results)) = response.take(0) {
+-        for result in results {
+-            println!("Result: {:?}", result);
++        let persons: Vec<Person> = results.into_iter().filter_map(|result| {
++            if let Value::Object(map) = result {
++                serde_json::from_value(Value::Object(map).into()).ok()
++            } else {
++                None
++            }
++        }).collect();
++
++        for person in persons {
++            println!("Person: {:?}", person);
+         }
+     }
+```
+
+And now the output is:
+```shell
+
+
+
+
+```shell
+$ cargo run
+   Compiling exper-surrealdb-take-gpt4o v0.1.0 (/home/wink/prgs/SurrealDB/exper-surrealdb-take-gpt4o)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.72s
+     Running `target/debug/exper-surrealdb-take-gpt4o`
+Person: Person { name: "Charlie", age: 35 }
+Person: Person { name: "Alice", age: 30 }
+Person: Person { name: "Bob", age: 25 }
+```
+
 ## License
 
 Licensed under either of

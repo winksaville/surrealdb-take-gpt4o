@@ -3,8 +3,9 @@ use surrealdb::Surreal;
 use surrealdb::sql::Value;
 use surrealdb::Response;
 use surrealdb::Result;
+use serde::{Deserialize, Serialize};
 
-#[derive(serde::Serialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Person {
     name: String,
     age: i64,
@@ -40,8 +41,16 @@ async fn main() -> Result<()> {
 
     // Access the first result
     if let Ok(Value::Array(results)) = response.take(0) {
-        for result in results {
-            println!("Result: {:?}", result);
+        let persons: Vec<Person> = results.into_iter().filter_map(|result| {
+            if let Value::Object(map) = result {
+                serde_json::from_value(Value::Object(map).into()).ok()
+            } else {
+                None
+            }
+        }).collect();
+
+        for person in persons {
+            println!("Person: {:?}", person);
         }
     }
 
