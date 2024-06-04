@@ -89,6 +89,65 @@ For more information about this error, try `rustc --explain E0308`.
 error: could not compile `exper-surrealdb-take-gpt4o` (bin "exper-surrealdb-take-gpt4o") due to 2 previous errors
 ```
 
+With these changes:
+```
+$ git --no-pager diff HEAD
+diff --git a/src/main.rs b/src/main.rs
+index 0d83e1b..a24ee48 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -1,5 +1,5 @@
++use surrealdb::engine::local::Mem;
+ use surrealdb::Surreal;
+-use surrealdb::opt::auth::Root;
+ use surrealdb::sql::Value;
+ use surrealdb::Response;
+ use surrealdb::Result;
+@@ -7,30 +7,24 @@ use surrealdb::Result;
+ #[tokio::main]
+ async fn main() -> Result<()> {
+     // Connect to the database
+-    let db = Surreal::new("localhost:8000").await?;
+-
+-    // Sign in with root credentials
+-    db.signin(Root {
+-        username: "root",
+-        password: "password",
+-    }).await?;
++    let db = Surreal::new::<Mem>(()).await?;
+ 
+     // Select a namespace and database
+     db.use_ns("namespace").use_db("database").await?;
+ 
+     // Perform a query with multiple results
+     let query = "SELECT * FROM table_name;";
+-    let response: Response = db.query(query).await?;
++    let mut response: Response = db.query(query).await?;
+ 
+     // Access the first result
+-    if let Some(Value::Array(results)) = response.take(0) {
++    if let Ok(Some(Value::Array(results))) = response.take(0) {
+         for result in results {
+             println!("First result: {:?}", result);
+         }
+     }
+ 
+     // Access the second result, if it exists
+-    if let Some(Value::Array(results)) = response.take(1) {
++    if let Ok(Some(Value::Array(results))) = response.take(1) {
+         for result in results {
+             println!("Second result: {:?}", result);
+         }
+```
+
+It compiles but doesn't output anything as there is no data in the table!
+```shell
+$ cargo run
+   Compiling exper-surrealdb-take-gpt4o v0.1.0 (/home/wink/prgs/SurrealDB/exper-surrealdb-take-gpt4o)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.36s
+     Running `target/debug/exper-surrealdb-take-gpt4o`
+```
+
 ## License
 
 Licensed under either of
