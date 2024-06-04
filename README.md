@@ -148,6 +148,128 @@ $ cargo run
      Running `target/debug/exper-surrealdb-take-gpt4o`
 ```
 
+I asked gpt4o to modify the code to insert some data into the table and it responded
+[here](https://chatgpt.com/share/8349f87b-33e6-44db-9e4e-ec580e1bd189)
+
+```rust
+$ cat -n src/main.rs
+     1  use surrealdb::engine::local::Mem;
+     2  use surrealdb::Surreal;
+     3  use surrealdb::sql::Value;
+     4  use surrealdb::Response;
+     5  use surrealdb::Result;
+     6
+     7  #[derive(serde::Serialize)]
+     8  struct Person {
+     9      name: String,
+    10      age: i64,
+    11  }
+    12
+    13  #[tokio::main]
+    14  async fn main() -> Result<()> {
+    15      // Connect to the database
+    16      let db = Surreal::new::<Mem>(()).await?;
+    17
+    18      // Select a namespace and database
+    19      db.use_ns("namespace").use_db("database").await?;
+    20
+    21      // Add several people to the database
+    22      let people = vec![
+    23          Person { name: "Alice".to_string(), age: 30 },
+    24          Person { name: "Bob".to_string(), age: 25 },
+    25          Person { name: "Charlie".to_string(), age: 35 },
+    26      ];
+    27
+    28      for person in people {
+    29          let query = format!(
+    30              "CREATE person CONTENT {{ name: '{}', age: {} }};",
+    31              person.name, person.age
+    32          );
+    33          db.query(&query).await?;
+    34      }
+    35
+    36      // Perform a query with multiple results
+    37      let query = "SELECT * FROM person;";
+    38      let mut response: Response = db.query(query).await?;
+    39
+    40      // Access the first result
+    41      if let Ok(Some(Value::Array(results))) = response.take(0) {
+    42          for result in results {
+    43              println!("Result: {:?}", result);
+    44          }
+    45      }
+    46
+    47      Ok(())
+    48  }
+```
+
+The diff is:
+```shell
+$ git --no-pager diff HEAD
+diff --git a/src/main.rs b/src/main.rs
+index a24ee48..ce86adb 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -4,6 +4,12 @@ use surrealdb::sql::Value;
+ use surrealdb::Response;
+ use surrealdb::Result;
+ 
++#[derive(serde::Serialize)]
++struct Person {
++    name: String,
++    age: i64,
++}
++
+ #[tokio::main]
+ async fn main() -> Result<()> {
+     // Connect to the database
+@@ -12,21 +18,29 @@ async fn main() -> Result<()> {
+     // Select a namespace and database
+     db.use_ns("namespace").use_db("database").await?;
+ 
++    // Add several people to the database
++    let people = vec![
++        Person { name: "Alice".to_string(), age: 30 },
++        Person { name: "Bob".to_string(), age: 25 },
++        Person { name: "Charlie".to_string(), age: 35 },
++    ];
++
++    for person in people {
++        let query = format!(
++            "CREATE person CONTENT {{ name: '{}', age: {} }};",
++            person.name, person.age
++        );
++        db.query(&query).await?;
++    }
++
+     // Perform a query with multiple results
+-    let query = "SELECT * FROM table_name;";
++    let query = "SELECT * FROM person;";
+     let mut response: Response = db.query(query).await?;
+ 
+     // Access the first result
+     if let Ok(Some(Value::Array(results))) = response.take(0) {
+         for result in results {
+-            println!("First result: {:?}", result);
+-        }
+-    }
+-
+-    // Access the second result, if it exists
+-    if let Ok(Some(Value::Array(results))) = response.take(1) {
+-        for result in results {
+-            println!("Second result: {:?}", result);
++            println!("Result: {:?}", result);
+         }
+     }
+```
+
+It compiles and runs but no output :(
+```shell
+$ cargo run
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.16s
+     Running `target/debug/exper-surrealdb-take-gpt4o`
+```
+
 ## License
 
 Licensed under either of
