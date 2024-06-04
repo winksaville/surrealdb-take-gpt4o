@@ -1,6 +1,5 @@
 use surrealdb::engine::local::Mem;
 use surrealdb::Surreal;
-use surrealdb::sql::Value;
 use surrealdb::Response;
 use surrealdb::Result;
 use serde::{Deserialize, Serialize};
@@ -39,19 +38,10 @@ async fn main() -> Result<()> {
     let mut response: Response = db.query(query).await?;
     // dbg!(&response);
 
-    // Access the first result
-    if let Ok(Value::Array(results)) = response.take(0) {
-        let persons: Vec<Person> = results.into_iter().filter_map(|result| {
-            if let Value::Object(map) = result {
-                serde_json::from_value(Value::Object(map).into()).ok()
-            } else {
-                None
-            }
-        }).collect();
-
-        for person in persons {
-            println!("Person: {:?}", person);
-        }
+    // Deserialize the results directly into Vec<Person>
+    let persons: Vec<Person> = response.take(0)?;
+    for person in persons {
+        println!("Person: {:?}", person);
     }
 
     Ok(())
