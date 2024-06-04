@@ -9,15 +9,22 @@ complicated way to get the data from the Response object but it
 was imformative. And then I asked it to simplify the code and it
 did a decent job, but needed some coaxing. The most important was
 to suggest that it look that the doc's for take. Look at the bottom
-of this README on how the bot did. **Bottom line when "you" know something
+of this README on how the bot did.
+
+> **Bottom line when "you" know something
 don't hesitate to suggest it to the bot**, but taking a longer
-route you might learn more :)
+route you might learn more :) Also, giving the bot the rust docs,
+https://docs.rs/surrealdb/1.5.1/, seemed to be very helpful and
+I'll use that technique in the future.
 
 I asked gpt40 to teach me about take():
->"Based on this SurrealDB documentation, https://docs.rs/surrealdb/1.5.1/, teach me how to do a query and especially how take() works."
+"Based on this SurrealDB documentation, https://docs.rs/surrealdb/1.5.1/,
+teach me how to do a query and especially how take() works."
 
-And it responded [here](https://chatgpt.com/share/8349f87b-33e6-44db-9e4e-ec580e1bd189)
-and this code:
+The entire conversation is
+[here](https://chatgpt.com/share/8349f87b-33e6-44db-9e4e-ec580e1bd189).
+
+But the first response was this code:
 ```rust
 $ cat -n src/main.rs
      1  use surrealdb::Surreal;
@@ -62,7 +69,7 @@ $ cat -n src/main.rs
     40  }
 ```
 
-Didn't compile:
+It didn't compile:
 ```shell
 $ cargo build
    Compiling exper-surrealdb-take-gpt4o v0.1.0 (/home/wink/prgs/SurrealDB/exper-surrealdb-take-gpt4o)
