@@ -270,6 +270,169 @@ $ cargo run
      Running `target/debug/exper-surrealdb-take-gpt4o`
 ```
 
+I came up with a solution, I first added the `dbg!(response)`:
+```
+$ git diff HEAD
+diff --git a/src/main.rs b/src/main.rs
+index ce86adb..3397487 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -36,6 +36,7 @@ async fn main() -> Result<()> {
+     // Perform a query with multiple results
+     let query = "SELECT * FROM person;";
+     let mut response: Response = db.query(query).await?;
++    dbg!(&response);
+ 
+     // Access the first result
+     if let Ok(Some(Value::Array(results))) = response.take(0) {
+```
+
+And the output is:
+```shell
+$ cargo run
+   Compiling exper-surrealdb-take-gpt4o v0.1.0 (/home/wink/prgs/SurrealDB/exper-surrealdb-take-gpt4o)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.59s
+     Running `target/debug/exper-surrealdb-take-gpt4o`
+[src/main.rs:39:5] &response = Response {
+    client: Surreal {
+        router: OnceLock(
+            Router {
+                sender: Sender,
+                last_id: 0,
+                features: {
+                    Backup,
+                    LiveQueries,
+                },
+            },
+        ),
+        engine: PhantomData<surrealdb::api::engine::any::Any>,
+    },
+    results: {
+        0: (
+            Stats {
+                execution_time: Some(
+                    173.356µs,
+                ),
+            },
+            Ok(
+                Array(
+                    Array(
+                        [
+                            Object(
+                                Object(
+                                    {
+                                        "age": Number(
+                                            Int(
+                                                30,
+                                            ),
+                                        ),
+                                        "id": Thing(
+                                            Thing {
+                                                tb: "person",
+                                                id: String(
+                                                    "4v2e2mvomzciy8q83ed3",
+                                                ),
+                                            },
+                                        ),
+                                        "name": Strand(
+                                            Strand(
+                                                "Alice",
+                                            ),
+                                        ),
+                                    },
+                                ),
+                            ),
+                            Object(
+                                Object(
+                                    {
+                                        "age": Number(
+                                            Int(
+                                                25,
+                                            ),
+                                        ),
+                                        "id": Thing(
+                                            Thing {
+                                                tb: "person",
+                                                id: String(
+                                                    "rblyshrt174epmcg05z3",
+                                                ),
+                                            },
+                                        ),
+                                        "name": Strand(
+                                            Strand(
+                                                "Bob",
+                                            ),
+                                        ),
+                                    },
+                                ),
+                            ),
+                            Object(
+                                Object(
+                                    {
+                                        "age": Number(
+                                            Int(
+                                                35,
+                                            ),
+                                        ),
+                                        "id": Thing(
+                                            Thing {
+                                                tb: "person",
+                                                id: String(
+                                                    "sh0b11y3l6jczfmdnjvw",
+                                                ),
+                                            },
+                                        ),
+                                        "name": Strand(
+                                            Strand(
+                                                "Charlie",
+                                            ),
+                                        ),
+                                    },
+                                ),
+                            ),
+                        ],
+                    ),
+                ),
+            ),
+        ),
+    },
+    live_queries: {},
+}
+```
+
+So there was no need for the `Ok(Some(_))` in the
+if statement just neededs the Ok:
+```shell
+$ git diff HEAD
+diff --git a/src/main.rs b/src/main.rs
+index ce86adb..fee86c8 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -36,9 +36,10 @@ async fn main() -> Result<()> {
+     // Perform a query with multiple results
+     let query = "SELECT * FROM person;";
+     let mut response: Response = db.query(query).await?;
++    // dbg!(&response);
+ 
+     // Access the first result
+-    if let Ok(Some(Value::Array(results))) = response.take(0) {
++    if let Ok(Value::Array(results)) = response.take(0) {
+         for result in results {
+             println!("Result: {:?}", result);
+         }
+```
+
+And now the output is:
+```shell
+$ cargo run
+   Compiling exper-surrealdb-take-gpt4o v0.1.0 (/home/wink/prgs/SurrealDB/exper-surrealdb-take-gpt4o)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.23s
+     Running `target/debug/exper-surrealdb-take-gpt4o`
+Result: Object(Object({"age": Number(Int(25)), "id": Thing(Thing { tb: "person", id: String("lpo957y8v4k3twsuelru") }), "name": Strand(Strand("Bob"))}))
+Result: Object(Object({"age": Number(Int(30)), "id": Thing(Thing { tb: "person", id: String("nx6th1xbo3bljkeykay5") }), "name": Strand(Strand("Alice"))}))
+Result: Object(Object({"age": Number(Int(35)), "id": Thing(Thing { tb: "person", id: String("yixm35a2j3pkhn7ohqj1") }), "name": Strand(Strand("Charlie"))}))
+```
+
 ## License
 
 Licensed under either of

@@ -36,9 +36,10 @@ async fn main() -> Result<()> {
     // Perform a query with multiple results
     let query = "SELECT * FROM person;";
     let mut response: Response = db.query(query).await?;
+    // dbg!(&response);
 
     // Access the first result
-    if let Ok(Some(Value::Array(results))) = response.take(0) {
+    if let Ok(Value::Array(results)) = response.take(0) {
         for result in results {
             println!("Result: {:?}", result);
         }
